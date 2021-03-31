@@ -1,0 +1,12 @@
+FROM alpine:20210212
+RUN apk update && apk add llvm11-dev clang-dev build-base zlib-dev curl clang-static llvm-static libxml2-dev linux-headers
+ENV CARGO_HOME /usr/local
+ENV RUSTUP_HOME /usr/local
+RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
+ARG KERNEL_HEADERS_TAR
+ADD $KERNEL_HEADERS_TAR /
+ARG REDBPF_TAR
+ADD $REDBPF_TAR /
+WORKDIR /redbpf
+ENV RUSTFLAGS -Ctarget-feature=-crt-static
+CMD cargo build

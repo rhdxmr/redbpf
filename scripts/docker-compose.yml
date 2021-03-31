@@ -1,0 +1,10 @@
+version: "3"
+services:
+  fedora-35:
+    image: redbpf-build-env:fedora-35
+  ubuntu-20.10:
+    image: redbpf-build-env:ubuntu-20.10
+  arch-20210321:
+    image: redbpf-build-env:arch-20210321
+  alpine-20210212:
+    image: redbpf-build-env:alpine-20210212

@@ -1,0 +1,11 @@
+FROM ubuntu:groovy
+RUN apt update && apt install -y build-essential zlib1g-dev llvm-11-dev libclang-11-dev curl
+ENV CARGO_HOME /usr/local
+ENV RUSTUP_HOME /usr/local
+RUN curl https://sh.rustup.rs -sSf | bash -s -- -y
+ARG KERNEL_HEADERS_TAR
+ADD $KERNEL_HEADERS_TAR /
+ARG REDBPF_TAR
+ADD $REDBPF_TAR /
+WORKDIR /redbpf
+CMD cargo build

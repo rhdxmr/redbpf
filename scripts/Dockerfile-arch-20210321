@@ -1,0 +1,11 @@
+FROM archlinux:base-devel-20210321.0.17674
+RUN pacman -Sy --noconfirm llvm clang zlib
+ENV CARGO_HOME /usr/local
+ENV RUSTUP_HOME /usr/local
+RUN curl https://sh.rustup.rs -sSf | bash -s -- -y
+ARG KERNEL_HEADERS_TAR
+ADD $KERNEL_HEADERS_TAR /
+ARG REDBPF_TAR
+ADD $REDBPF_TAR /
+WORKDIR /redbpf
+CMD cargo build

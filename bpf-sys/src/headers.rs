@@ -63,11 +63,13 @@ pub fn running_kernel_version() -> Option<String> {
 
 pub fn build_kernel_version() -> Result<KernelVersion, Box<dyn Error>> {
     let KernelHeaders { source: _, build } = kernel_headers_path()?;
+
+    // Instead of `-f' option, `-C' should be used for alpine linux
     let make_db = Command::new("make")
-                          .arg("-qp")
-                          .arg("-f")
-                          .arg(build.join("Makefile"))
-                          .output()?;
+        .arg("-qp")
+        .arg("-C")
+        .arg(build)
+        .output()?;
     let reader = String::from_utf8(make_db.stdout)?;
 
     let mut version = None::<u8>;

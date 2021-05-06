@@ -1,0 +1,83 @@
+name: RedBPF build
+
+on:
+  push:
+    branches:
+      - main
+
+    # Publish `v1.2.3` tags as releases.
+    tags:
+      - v*
+
+  # Run tests for any PRs.
+  pull_request:
+
+env:
+  IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/redbpf
+  MAIN_BRANCH: main
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: System info
+      run: |
+        uname -a
+    - name: Build docker image for building RedBPF
+      run: |
+        docker build -t redbpf-build -f Dockerfile.ubuntu-20.04 .
+    - name: Run RedBPF build
+      run: |
+        docker run --privileged \
+        -v /sys/kernel/debug:/sys/kernel/debug:rw \
+        -v /lib/modules:/lib/modules:ro \
+        -v /usr/src:/usr/src:ro \
+        -v /usr/include/linux:/usr/include/linux:ro \
+        redbpf-build
+      # - name: Set up version information
+      #   run: |
+      #     VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
+      #     [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
+      #     [ "$VERSION" == "$MAIN_BRANCH" ] && VERSION=latest
+      #     echo "version=$VERSION" >> $GITHUB_ENV
+
+      # - name: Build Ubuntu 20.04
+      #   id: ubuntu2004
+      #   run: |
+      #     VERSION=${{ env.version }}-ubuntu-20.04
+      #     docker build --no-cache \
+      #                  -f Dockerfile.20.04 \
+      #                  -t $IMAGE_NAME:$VERSION \
+      #                  .
+      #     echo "::set-output name=image_id::$IMAGE_NAME:$VERSION"
+
+      # - name: Build Ubuntu 18.04
+      #   id: ubuntu1804
+      #   run: |
+      #     VERSION=${{ env.version }}-ubuntu-18.04
+      #     docker build --no-cache \
+      #                  -f Dockerfile.18.04 \
+      #                  -t $IMAGE_NAME:$VERSION \
+      #                  .
+      #     echo "::set-output name=image_id::$IMAGE_NAME:$VERSION"
+
+      # - name: Build Fedora Rawhide
+      #   id: rawhide
+      #   run: |
+      #     VERSION=${{ env.version }}-fedora-rawhide
+      #     docker build --no-cache \
+      #                  -f Dockerfile.fedora \
+      #                  -t $IMAGE_NAME:$VERSION \
+      #                  .
+      #     echo "::set-output name=image_id::$IMAGE_NAME:$VERSION"
+
+      # - name: Log into registry
+      #   run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      # - name: Push image
+      #   if: github.event_name == 'push'
+      #   run: |
+      #     docker push ${{ steps.ubuntu2004.outputs.image_id }}
+      #     docker push ${{ steps.ubuntu1804.outputs.image_id }}
+      #     docker push ${{ steps.rawhide.outputs.image_id }}

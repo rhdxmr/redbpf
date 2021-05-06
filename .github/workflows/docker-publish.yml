@@ -26,6 +26,7 @@ jobs:
         uname -a
     - name: Build docker image for building RedBPF
       run: |
+        git submodule update --init --recursive
         docker build -t redbpf-build -f Dockerfile.ubuntu-20.04 .
     - name: Run RedBPF build
       run: |

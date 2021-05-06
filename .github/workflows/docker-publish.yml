@@ -1,4 +1,4 @@
-name: RedBPF build
+name: RedBPF build test
 
 on:
   push:
@@ -34,7 +34,7 @@ jobs:
         -v /lib/modules:/lib/modules:ro \
         -v /usr/src:/usr/src:ro \
         -v /usr/include/linux:/usr/include/linux:ro \
-        -v .:/build \
+        -v $PWD:/build \
         -w /build \
         $BASE_IMAGE:latest-ubuntu-20.04 \
         /bin/bash -c "cargo build && cargo build --examples"
@@ -57,7 +57,7 @@ jobs:
         -v /lib/modules:/lib/modules:ro \
         -v /usr/src:/usr/src:ro \
         -v /usr/include/linux:/usr/include/linux:ro \
-        -v .:/build \
+        -v $PWD:/build \
         -w /build \
         $BASE_IMAGE:latest-fedora-rawhide \
         /bin/bash -c "cargo build && cargo build --examples"

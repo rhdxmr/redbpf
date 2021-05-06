@@ -1,5 +1,0 @@
-FROM ghcr.io/rhdxmr/ingraind-build:latest-fedora-rawhide
-
-WORKDIR /build
-COPY . .
-CMD cargo build && cargo build --examples

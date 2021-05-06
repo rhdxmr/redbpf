@@ -1,5 +1,0 @@
-FROM ghcr.io/rhdxmr/ingraind-build:latest-ubuntu-20.04
-
-WORKDIR /build
-COPY . .
-CMD cargo build && cargo build --examples

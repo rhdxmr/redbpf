@@ -12,35 +12,47 @@ on:
   # Run tests for any PRs.
   pull_request:
 
-env:
-  IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/redbpf
-  MAIN_BRANCH: main
-
 jobs:
-  build-test:
+  ubuntu-20.04-build-test:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        os: [ubuntu-20.04, fedora-35]
-        env:
-        - IMAGE_TAG: ubuntu-20.04
-        - IMAGE_TAG: fedora-35
     steps:
     - uses: actions/checkout@v2
     - name: System info
       run: |
         uname -a
         lsb_release -a
-    - name: Build docker image for building RedBPF
-      env: ${{ matrix.env }}
+    - name: Initialize git submodules
       run: |
         git submodule update --init --recursive
-        docker build -t redbpf-build -f Dockerfile.${IMAGE_TAG} .
-    - name: Run RedBPF build
+    - name: Run RedBPF build on ubuntu-20.04 container
       run: |
         docker run --privileged \
         -v /sys/kernel/debug:/sys/kernel/debug:rw \
         -v /lib/modules:/lib/modules:ro \
         -v /usr/src:/usr/src:ro \
         -v /usr/include/linux:/usr/include/linux:ro \
-        redbpf-build
+        -v .:/build \
+        ghcr.io/rhdxmr/ingraind-build:latest-ubuntu-20.04 \
+        /bin/bash -c "cargo build && cargo build --examples"
+
+  fedora-35-build-test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: System info
+      run: |
+        uname -a
+        lsb_release -a
+    - name: Initialize git submodules
+      run: |
+        git submodule update --init --recursive
+    - name: Run RedBPF build on fedora-35 container
+      run: |
+        docker run --privileged \
+        -v /sys/kernel/debug:/sys/kernel/debug:rw \
+        -v /lib/modules:/lib/modules:ro \
+        -v /usr/src:/usr/src:ro \
+        -v /usr/include/linux:/usr/include/linux:ro \
+        -v .:/build \
+        ghcr.io/rhdxmr/ingraind-build:latest-fedora-rawhide \
+        /bin/bash -c "cargo build && cargo build --examples"

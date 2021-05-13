@@ -56,8 +56,8 @@ pub mod xdp;
 pub use bpf_sys::uname;
 use bpf_sys::{
     bpf_attach_type_BPF_SK_SKB_STREAM_PARSER, bpf_attach_type_BPF_SK_SKB_STREAM_VERDICT, bpf_insn,
-    bpf_map_def, bpf_map_type_BPF_MAP_TYPE_ARRAY, bpf_map_type_BPF_MAP_TYPE_PERCPU_ARRAY,
-    bpf_prog_type, BPF_ANY,
+    bpf_map_def, bpf_map_info, bpf_map_type_BPF_MAP_TYPE_ARRAY,
+    bpf_map_type_BPF_MAP_TYPE_PERCPU_ARRAY, bpf_prog_type, BPF_ANY,
 };
 use goblin::elf::{reloc::RelocSection, section_header as hdr, Elf, SectionHeader, Sym};
 
@@ -71,6 +71,7 @@ use std::mem;
 use std::mem::MaybeUninit;
 use std::ops::{Deref, DerefMut};
 use std::os::unix::io::RawFd;
+use std::path::Path;
 use std::ptr;
 
 pub use crate::error::{Error, Result};
@@ -164,6 +165,7 @@ pub struct Map {
     fd: RawFd,
     config: bpf_map_def,
     section_data: bool,
+    pin_path: Option<Box<Path>>,
 }
 
 pub struct HashMap<'a, K: Clone, V: Clone> {
@@ -976,7 +978,73 @@ impl Map {
             fd,
             config,
             section_data: false,
+            pin_path: None,
         })
+    }
+
+    pub fn from_pin_path<P: AsRef<Path>>(pathname: P) -> Result<Map> {
+        let fd = unsafe {
+            let cpathname = CString::new(pathname.as_ref().to_str().unwrap())?;
+            bpf_sys::bpf_obj_get(cpathname.as_ptr())
+        };
+        if fd < 0 {
+            error!("error on bpf_obj_get");
+            return Err(Error::IO(io::Error::last_os_error()));
+        }
+        let map_info = unsafe {
+            let mut info = mem::zeroed::<bpf_map_info>();
+            let mut info_len = mem::size_of_val(&info) as u32;
+            if bpf_sys::bpf_obj_get_info_by_fd(fd, &mut info as *mut _ as *mut _, &mut info_len)
+                != 0
+            {
+                error!("error on bpf_obj_get_info_by_fd");
+                return Err(Error::IO(io::Error::last_os_error()));
+            }
+            info
+        };
+
+        let name = unsafe {
+            CStr::from_ptr(&map_info.name as *const _)
+                .to_string_lossy()
+                .into_owned()
+        };
+        Ok(Map {
+            name,
+            kind: map_info.type_,
+            fd,
+            config: bpf_map_def {
+                type_: map_info.type_,
+                key_size: map_info.key_size,
+                value_size: map_info.value_size,
+                max_entries: map_info.max_entries,
+                map_flags: map_info.map_flags,
+            },
+            section_data: false,
+            pin_path: Some(Box::from(pathname.as_ref())),
+        })
+    }
+
+    pub fn pin<P: AsRef<Path>>(&mut self, pathname: P) -> Result<()> {
+        unsafe {
+            let cpathname = CString::new(pathname.as_ref().to_str().unwrap())?;
+            if bpf_sys::bpf_obj_pin(self.fd, cpathname.as_ptr()) != 0 {
+                Err(Error::IO(io::Error::last_os_error()))
+            } else {
+                self.pin_path = Some(Box::from(pathname.as_ref()));
+                Ok(())
+            }
+        }
+    }
+
+    pub fn unpin(&mut self) -> Result<()> {
+        if self.pin_path.is_none() {
+            return Err(Error::Map);
+        }
+
+        let pin_path = self.pin_path.as_ref().unwrap();
+        fs::remove_file(pin_path)?;
+        self.pin_path = None;
+        Ok(())
     }
 }
 

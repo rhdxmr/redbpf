@@ -43,3 +43,8 @@ required-features = ["probes"]
 name = "biolatpcts"
 path = "src/biolatpcts/main.rs"
 required-features = ["probes"]
+
+[[bin]]
+name = "tc-test"
+path = "src/tc_test/main.rs"
+required-features = ["probes"]
